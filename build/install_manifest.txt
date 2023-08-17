@@ -1,0 +1,7 @@
+/home/nvidia/pyorbbecsdk/install/lib/pyorbbecsdk.cpython-37m-aarch64-linux-gnu.so
+/home/nvidia/pyorbbecsdk/install/lib/libudev.so.1.6.3
+/home/nvidia/pyorbbecsdk/install/lib/libudev.so
+/home/nvidia/pyorbbecsdk/install/lib/libudev.so.1
+/home/nvidia/pyorbbecsdk/install/lib/libOrbbecSDK.so.1.6
+/home/nvidia/pyorbbecsdk/install/lib/libOrbbecSDK.so.1.6.3
+/home/nvidia/pyorbbecsdk/install/lib/libOrbbecSDK.so
