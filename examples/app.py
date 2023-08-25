@@ -1,9 +1,10 @@
 from flask import Flask, render_template, Response,request, render_template, json, jsonify, send_file
 import os
 import io
+import cv2
+import numpy as np
 import ctypes
 import multiprocessing as mp
-import sys
 
 from pyorbbecsdk import Pipeline, FrameSet
 from pyorbbecsdk import Config
@@ -11,18 +12,14 @@ from pyorbbecsdk import OBSensorType, OBFormat
 from pyorbbecsdk import OBError
 from pyorbbecsdk import VideoStreamProfile
 from pyorbbecsdk import *
-import cv2
-import numpy as np
+
 from utils import frame_to_bgr_image
 from typing import Optional
-import threading
-
-sys.path.append('$(pwd)/install/lib/')
 
 
 pipeline: Optional[Pipeline] = None
 
-def save_depth_frame(frame: DepthFrame, png_filename):
+def save_depth_frame(frame: DepthFrame, color_time):
     if frame is None:
         return
     width = frame.get_width()
@@ -37,17 +34,18 @@ def save_depth_frame(frame: DepthFrame, png_filename):
     #if not os.path.exists(save_image_dir):
     #    os.mkdir(save_image_dir)
     #raw_filename = save_image_dir + "/depth_{}x{}_{}_{}.raw".format(width, height, index, timestamp)
-    raw_filename = './Img/Depth_0000.raw'
+    raw_filename = './Img/Depth_{}.raw'.format(color_time)
     data.tofile(raw_filename)
-    #png_filename = save_image_dir + "/depth_{}x{}_{}_{}.png".format(width, height, index, timestamp)
+    png_filename = './Img/Depth_{}.png'.format(color_time)
     img=np.fromfile(raw_filename, dtype='uint16')
     # 利用numpy中array的reshape函数将读取到的数据进行重新排列。
     img=img.reshape(height, width, 1)
     cv2.imwrite(png_filename, img)
+    return timestamp
 
 
 
-def save_color_frame(frame: ColorFrame, filename):
+def save_color_frame(frame: ColorFrame):
     if frame is None:
         return
     width = frame.get_width()
@@ -56,12 +54,13 @@ def save_color_frame(frame: ColorFrame, filename):
     #save_image_dir = os.path.join(os.getcwd(), "color_images")
     #if not os.path.exists(save_image_dir):
     #    os.mkdir(save_image_dir)
-    #filename = save_image_dir + "/color_{}x{}_{}_{}.png".format(width, height, index, timestamp)
+    filename = './Img/Color_{}.png'.format(timestamp)
     image = frame_to_bgr_image(frame)
     if image is None:
         print("failed to convert frame to image")
         return
     cv2.imwrite(filename, image)
+    return timestamp
 
 def gen():
 
@@ -165,10 +164,6 @@ def viewer():   # 显示图片
 @app.route('/api/save/capture', methods=['GET'])
 def capture():   # 拍摄
 
-    str = './Img/Color_0000.png&./Img/Depth_0000.png'  # 字符串序列
-    #color_depth_png =  './Img/Color_to_Depth_0000.png'
-    color_png_path,  depth_png_path= str.split('&', 1)
-
     global pipeline
     #if pipeline:
     #    pipeline.stop()
@@ -192,15 +187,17 @@ def capture():   # 拍摄
             break
         color_frame = frames.get_color_frame()
         if color_frame is not None and saved_color_cnt < max_cnt:
-            save_color_frame(color_frame, color_png_path)
+            color_time = save_color_frame(color_frame)
             saved_color_cnt += 1
         depth_frame = frames.get_depth_frame()
         if depth_frame is not None and saved_depth_cnt < max_cnt:
-            save_depth_frame(depth_frame, depth_png_path)
+            save_depth_frame(depth_frame, color_time)
             saved_depth_cnt += 1
     pipeline.stop()
     pipeline = None
 
+    color_png_path = './Img/Color_{}.png'.format(color_time)
+    depth_png_path= './Img/Depth_{}.png'.format(color_time)
 
     response = {
         "code":0,
@@ -216,15 +213,27 @@ def segment():   # 测距
     data = json.loads(data)
     depth_path = data['data'][0]['depth_png']# 本地图片路径
     print(depth_path)
-    #lib1 = ctypes.CDLL('./lib/libdemo1.so')  # 加载共享库
-    #lib1.CalCylinder()
+    numbers = ''.join(filter(str.isdigit, depth_path))
+    if numbers:
+        extracted_number = int(numbers)
+        print(extracted_number)
+    lib1 = ctypes.CDLL('./lib/libdemo1.so')  # 加载共享库
+    lib1.CalCylinder(extracted_number)
 
-    seg_png = './Result/Seg_0000.png'# 本地图片路径
-        # 将布尔值封装为JSON格式并返回
+    seg_path = './Result/Seg_'+ str(extracted_number) +'.png'# 本地图片路径
+    print(seg_path)
+
+    ###########test##############
+    #color_path = './Img/Color_'+ str(extracted_number) +'.png'# 本地图片路径
+    #image = cv2.imread(color_path)
+    #cv2.imwrite(seg_path, image)
+    ###########test##############
+
+    # 将布尔值封装为JSON格式并返回
     response = {
         "code":0,
         "msg":"计算成功",
-        "data": [{"color_png":seg_png}]
+        "data": [{"color_png":seg_path}]
     }
     return jsonify(response)
 
