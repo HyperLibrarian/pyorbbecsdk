@@ -218,7 +218,7 @@ def segment():   # 测距
         extracted_number = int(numbers)
         print(extracted_number)
     lib1 = ctypes.CDLL('./lib/libdemo1.so')  # 加载共享库
-    lib1.CalCylinder(extracted_number, 15, 1800, 15, 40)
+    lib1.CalCylinder(extracted_number, 8, 1500, 5, 10)
 
     seg_path = './Result/Seg_'+ str(extracted_number) +'.png'# 本地图片路径
     print(seg_path)
