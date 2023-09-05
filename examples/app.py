@@ -63,10 +63,19 @@ def save_color_frame(frame: ColorFrame):
     return timestamp
 
 def gen():
-
+    
+    context = Context()
+    device_list = context.query_devices()
+    device = device_list.get_device_by_index(0)
+    mirror = False
+    device.set_bool_property(OBPropertyID.OB_PROP_COLOR_MIRROR_BOOL, mirror)
+    device.set_bool_property(OBPropertyID.OB_PROP_DEPTH_MIRROR_BOOL, mirror)
+    device.set_bool_property(OBPropertyID.OB_PROP_IR_MIRROR_BOOL, mirror)
+    
     global pipeline 
-    pipeline = Pipeline()
+    pipeline = Pipeline(device)
     config = Config()
+
     try:
         profile_list = pipeline.get_stream_profile_list(OBSensorType.COLOR_SENSOR)
         try:
@@ -127,6 +136,7 @@ def video_feed():
 
     return Response(gen(),
                     mimetype='multipart/x-mixed-replace; boundary=frame') 
+
 @app.route('/api/video/stop_stream', methods=['GET'])   # 设备关闭
 def stop_stream():
 
